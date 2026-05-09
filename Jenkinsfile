@@ -3,33 +3,35 @@ pipeline {
 
     environment {
         DOCKER_HUB_USER = 'avital2163' 
-        IMAGE_NAME = 'compose_demo_app' // השם שיופיע ב-Docker Hub
-        DOCKER_HUB_CREDS = 'docker-hub-credentials' // המזהה שהגדרת ב-Credentials של ג'נקינס
+        IMAGE_NAME = 'compose_demo_app'
+        DOCKER_HUB_CREDS = 'docker-hub-credentials'
     }
 
     stages {
         stage('Checkout') {
             steps {
+                // שימוש ב-checkout scm המובנה של ג'נקינס
                 checkout scm
             }
         }
 
         stage('Cleanup') {
             steps {
-                sh 'docker-compose down --remove-orphans'
-                sh 'docker system prune -f'
+                // שימוש ב-bat במקום sh עבור Windows
+                bat 'docker-compose down --remove-orphans'
+                bat 'docker system prune -f'
             }
         }
 
         stage('Build') {
             steps {
-                sh 'docker-compose build --no-cache'
+                bat 'docker-compose build --no-cache'
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh 'docker-compose run --rm tests python -m pytest test_app.py -v'
+                bat 'docker-compose run --rm tests python -m pytest test_app.py -v'
             }
         }
 
@@ -37,10 +39,10 @@ pipeline {
             steps {
                 script {
                     withCredentials([usernamePassword(credentialsId: "${DOCKER_HUB_CREDS}", passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
-                        sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
-                        // תיוג והעלאה של ה-image של האפליקציה (app)
-                        sh "docker tag ${IMAGE_NAME} ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest"
-                        sh "docker push ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest"
+                        // התחברות ודחיפה באמצעות bat
+                        bat "echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin"
+                        bat "docker tag ${IMAGE_NAME} ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest"
+                        bat "docker push ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest"
                     }
                 }
             }
@@ -48,14 +50,14 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh 'docker-compose up -d'
+                bat 'docker-compose up -d'
             }
         }
     }
 
     post {
         always {
-            sh 'docker-compose down'
+            bat 'docker-compose down'
         }
     }
 }
