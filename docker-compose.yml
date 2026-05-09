@@ -3,9 +3,10 @@ version: '3.8'
 services:
   app:
     build: ./app
-    container_name: compose_app_container # שם הקונטיינר שיוצג במערכת
+    image: compose_demo_app  # הוספת השורה הזו כדי שג'נקינס ידע איזה אימג' לתייג
+    container_name: compose_app_container
     environment:
-      - USER_NAME=Miri
+      - USER_NAME=Avital
       - APP_ENV=Development
 
   tests:

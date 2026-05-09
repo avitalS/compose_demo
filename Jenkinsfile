@@ -1,65 +1,61 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKER_HUB_USER = 'avital2163' 
+        IMAGE_NAME = 'compose_demo_app' // השם שיופיע ב-Docker Hub
+        DOCKER_HUB_CREDS = 'docker-hub-credentials' // המזהה שהגדרת ב-Credentials של ג'נקינס
+    }
+
     stages {
         stage('Checkout') {
             steps {
-                echo "שלב 1: שליפת הקוד מהמאגר"
                 checkout scm
             }
         }
 
-        stage('Cleanup Old Containers') {
+        stage('Cleanup') {
             steps {
-                echo "שלב 2: ניקוי קונטיינרים וimages ישנים"
-                sh '''
-                    docker-compose down --remove-orphans
-                    docker system prune -f --volumes
-                '''
+                sh 'docker-compose down --remove-orphans'
+                sh 'docker system prune -f'
             }
         }
 
-        stage('Build Images') {
+        stage('Build') {
             steps {
-                echo "שלב 3: בנייה של ה-images"
-                sh '''
-                    docker-compose build --no-cache
-                '''
+                sh 'docker-compose build --no-cache'
             }
         }
 
         stage('Run Tests') {
             steps {
-                echo "שלב 4: הרצת בדיקות"
-                sh '''
-                    docker-compose run --rm tests python -m pytest test_app.py -v
-                '''
+                sh 'docker-compose run --rm tests python -m pytest test_app.py -v'
             }
         }
+
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: "${DOCKER_HUB_CREDS}", passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                        sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
+                        // תיוג והעלאה של ה-image של האפליקציה (app)
+                        sh "docker tag ${IMAGE_NAME} ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest"
+                        sh "docker push ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest"
+                    }
+                }
+            }
+        }
+
         stage('Deploy') {
             steps {
-                echo "שלב 5: הצבת האפליקציה"
-                sh '''
-                    docker-compose up -d
-                    echo "האפליקציה מורצת בהצלחה!"
-                    docker-compose logs app
-                '''
+                sh 'docker-compose up -d'
             }
         }
     }
 
     post {
         always {
-            echo "ניקוי סיום - הורדת קונטיינרים"
-            sh '''
-                docker-compose down
-            '''
-        }
-        success {
-            echo "הפايפליין הצליח בהצלחה! ✓"
-        }
-        failure {
-            echo "הפايפליין נכשל! ✗"
+            sh 'docker-compose down'
         }
     }
 }
