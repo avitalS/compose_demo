@@ -1,8 +1,18 @@
+version: '3.8'
+
 services:
   app:
     build: ./app
+    container_name: compose_app_container # שם הקונטיינר שיוצג במערכת
+    environment:
+      - USER_NAME=Miri
+      - APP_ENV=Development
 
   tests:
     build: ./tests
+    container_name: compose_test_container # שם הקונטיינר שיוצג במערכת
     depends_on:
       - app
+    environment:
+      - USER_NAME=Avital
+      - APP_ENV=Testing
